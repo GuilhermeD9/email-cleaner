@@ -1,6 +1,7 @@
 import imaplib
 import email
 from email.header import decode_header
+from tqdm import tqdm
 import datetime
 import getpass
 
@@ -40,7 +41,7 @@ def find_old_emails(mail, dias=30):
         return []
     return dados[0].split()
 
-def show_emails(mail, lista_ids, limit=30):
+def show_emails(mail, lista_ids, limit=15):
     print("\n[E-mails encontrados]")
     for i, num in enumerate(lista_ids[:limit]):
         _, dados = mail.fetch(num, "(RFC822)")
@@ -57,9 +58,19 @@ def show_emails(mail, lista_ids, limit=30):
     if len(lista_ids) > limit:
         print(f"... e mais {len(lista_ids) - limit} e-mails.")
 
-def delete_emails(mail, lista_ids):
-    for num in lista_ids:
-        mail.store(num, '+FLAGS', '\\Deleted')
+def delete_emails(mail, lista_ids, chunk_size=200):
+    if not lista_ids:
+        print("[!] Nenhum email para deletar.")
+        return
+
+    print(f"[!] Deletando {len(lista_ids)} e-mails em blocos de {chunk_size}...")
+
+    lista_ids = [id.decode() if isinstance(id, bytes) else id for id in lista_ids]
+
+    for i in tqdm(range(0, len(lista_ids), chunk_size), desc="Progresso", unit="bloco"):
+        chunk = lista_ids[i:i + chunk_size]
+        ids_str = ','.join(chunk)
+        mail.store(ids_str, '+FLAGS', '\\Deleted')
     mail.expunge()
     print("[✓] E-mails deletados com sucesso.")
 
